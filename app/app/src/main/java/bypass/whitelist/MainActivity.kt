@@ -20,7 +20,7 @@ import mobile.LogCallback
 class MainActivity : AppCompatActivity() {
 
     companion object {
-        private const val VK_CALL_LINK = "https://vk.com/call/join/6kGvQofFiOyjuK0w_BeQvAx8gTsUg0PKUVzWt0VmkIg" // Open call page on app start
+        private const val VK_CALL_LINK = "" // Open call page on app start
     }
 
     private lateinit var webView: WebView
@@ -137,9 +137,18 @@ class MainActivity : AppCompatActivity() {
         }
 
         webView.webViewClient = object : WebViewClient() {
+            override fun onPageStarted(view: WebView, url: String, favicon: android.graphics.Bitmap?) {
+                view.evaluateJavascript("""(function(){
+var oac=window.AudioContext||window.webkitAudioContext;
+if(oac){var nac=function(){var c=new oac();c.suspend();
+  c.resume=function(){return Promise.resolve()};
+  return c};
+  nac.prototype=oac.prototype;window.AudioContext=nac;
+  if(window.webkitAudioContext)window.webkitAudioContext=nac}
+})()""", null)
+            }
             override fun onPageFinished(view: WebView, url: String) {
                 appendLog("Page loaded, injecting hook...")
-                view.evaluateJavascript("(function(){var o=HTMLMediaElement.prototype.play;HTMLMediaElement.prototype.play=function(){this.muted=true;this.volume=0;return o.call(this)}})()", null)
                 view.evaluateJavascript(hookJs, null)
             }
         }

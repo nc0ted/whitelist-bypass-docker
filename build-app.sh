@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-ROOT="$(dirname "$0")"
+ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT/app"
 
 [ -f "./gradlew" ] || { echo "gradlew not found"; exit 1; }
