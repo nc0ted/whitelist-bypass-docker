@@ -44,12 +44,12 @@ if [ "$PLATFORM" = "vk" ]; then
     fi
     
     echo "Starting VK Call creator..."
-    echo "Command: /app/headless-vk-creator $ARGS"
+    echo "Command: /app/headless-vk-creator $ARGS $@"
     echo ""
-    exec /app/headless-vk-creator $ARGS
+    exec /app/headless-vk-creator $ARGS "$@"
 else
     echo "Starting Telemost creator..."
-    echo "Command: /app/headless-telemost-creator $ARGS"
+    echo "Command: /app/headless-telemost-creator $ARGS $@"
     echo ""
-    exec /app/headless-telemost-creator $ARGS
+    exec /app/headless-telemost-creator $ARGS "$@"
 fi

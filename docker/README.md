@@ -23,7 +23,7 @@
 ```bash
 # Клонировать репозиторий
 git clone https://github.com/nc0ted/whitelist-bypass-docker.git
-cd  whitelist-bypass-docker
+cd  whitelist-bypass-docker/docker
 
 # Получить cookies от Yandex Telemost
 # 1. Откройте https://telemost.yandex.ru в браузере
@@ -35,14 +35,48 @@ nano cookies-yandex.json
 # Вставьте JSON с cookies, сохраните (Ctrl+O, Enter, Ctrl+X)
 
 # Собрать server image
-cd docker
 ./build-server.sh
 docker build -f Dockerfile.server -t whitelist-bypass-server ..
+```
 
+### docker-compose с VK ботом
+
+**Получение VK_TOKEN:**
+
+1. Создайте сообщество ВК или используйте существующее
+2. Перейдите: Управление → Дополнительно → Работа с API → Создать ключ
+3. Скопируйте токен
+4. Включите Long Poll API
+
+**Получение ALLOWED_USER_ID:**
+
+Получить свой ID можно на regvk.com
+
+**Запуск:**
+
+```bash
+# Создать .env файл
+cp .env.server.example .env
+nano .env
+# Вставьте VK_TOKEN и ALLOWED_USER_ID
+
+# Запустить (vk-bot + creator)
+docker-compose -f docker-compose.server.yml up -d
+```
+
+**Теперь вы можете писать боту команды в сообщения сообщества:**
+- `/link` — показывает текущую ссылку на присоединение
+- `/restart` — перезагружает контейнер и выдает новую ссылку
+- `/stop` — останавливает контейнер и очищает ссылку
+- `/logs` — выводит последние 10 строк логов
+
+### docker run без бота
+
+```bash
 # Запустить server
 docker run -d \
   --name whitelist-bypass-server \
-  -v ~/whitelist-bypass-docker/cookies-yandex.json:/app/cookies-yandex.json \
+  -v ~/whitelist-bypass-docker/docker/cookies-yandex.json:/app/cookies-yandex.json \
   -e PLATFORM=telemost \
   -e TUNNEL_MODE=video \
   whitelist-bypass-server:latest

@@ -1,0 +1,33 @@
+services:
+  vk-bot:
+    build:
+      context: vk-bot
+      dockerfile: Dockerfile
+    image: whitelist-bypass-vk-bot:latest
+    container_name: whitelist-bypass-vk-bot
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - .:/app/data
+    environment:
+      - VK_TOKEN=${VK_TOKEN}
+      - ALLOWED_USER_ID=${ALLOWED_USER_ID}
+      - CREATOR_CONTAINER_NAME=whitelist-bypass-server
+      - CALL_LINK_FILE=/app/data/call-link.txt
+  creator:
+    build:
+      context: ..
+      dockerfile: ./docker/Dockerfile.server
+    image: whitelist-bypass-server:latest
+    container_name: whitelist-bypass-server
+    restart: "no"
+    depends_on:
+      - vk-bot
+    volumes:
+      - ./cookies-yandex.json:/app/cookies-yandex.json
+      - .:/app/data
+    environment:
+      - PLATFORM=${PLATFORM:-telemost}
+      - TUNNEL_MODE=${TUNNEL_MODE:-video}
+      - RESOURCES=${RESOURCES:-default}
+    command: --write-file /app/data/call-link.txt
