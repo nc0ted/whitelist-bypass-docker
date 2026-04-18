@@ -34,6 +34,7 @@ type TelemostHeadlessJoiner struct {
 	joinLink    string
 	displayName string
 	tunnelMode  string
+	dockerMode  bool
 
 	ws   *websocket.Conn
 	wsMu sync.Mutex
@@ -77,6 +78,10 @@ func (j *TelemostHeadlessJoiner) SetJoinLink(link string) {
 
 func (j *TelemostHeadlessJoiner) SetDisplayName(name string) {
 	j.displayName = name
+}
+
+func (j *TelemostHeadlessJoiner) SetDockerMode(enabled bool) {
+	j.dockerMode = enabled
 }
 
 func (j *TelemostHeadlessJoiner) Run() {
@@ -135,7 +140,16 @@ var resolvingTransport = &http.Transport{
 
 func (j *TelemostHeadlessJoiner) tmRequest(method, path string) ([]byte, int, error) {
 	if j.httpClient == nil {
-		j.httpClient = &http.Client{Timeout: 15 * time.Second, Transport: resolvingTransport}
+		var transport http.RoundTripper
+		if j.dockerMode {
+			// Docker mode: use standard DNS
+			transport = &http.Transport{
+				DialContext: (&net.Dialer{Timeout: 10 * time.Second}).DialContext,
+			}
+		} else {
+			transport = resolvingTransport
+		}
+		j.httpClient = &http.Client{Timeout: 15 * time.Second, Transport: transport}
 	}
 	req, err := http.NewRequest(method, tmAPIBase+path, nil)
 	if err != nil {
@@ -731,10 +745,21 @@ func (j *TelemostHeadlessJoiner) parseICEServersFromHello(sh map[string]interfac
 			ip, ok := resolved[host]
 			if !ok {
 				var err error
-				ip, err = requestResolve(host)
-				if err != nil {
-					j.logFn("telemost-joiner: resolve ICE host %s failed: %s", common.MaskAddr(host), common.MaskError(err))
-					continue
+				if j.dockerMode {
+					// Docker mode: use standard DNS
+					ips, err := net.LookupHost(host)
+					if err != nil || len(ips) == 0 {
+						j.logFn("telemost-joiner: resolve ICE host %s failed: %s", common.MaskAddr(host), common.MaskError(err))
+						continue
+					}
+					ip = ips[0]
+				} else {
+					// Android mode: use stdin resolver
+					ip, err = requestResolve(host)
+					if err != nil {
+						j.logFn("telemost-joiner: resolve ICE host %s failed: %s", common.MaskAddr(host), common.MaskError(err))
+						continue
+					}
 				}
 				resolved[host] = ip
 				j.logFn("telemost-joiner: resolved ICE host %s -> %s", host, ip)
@@ -755,9 +780,19 @@ func (j *TelemostHeadlessJoiner) connectAndRun() {
 	wsHeader.Set("Origin", tmOrigin)
 
 	j.logFn("telemost-joiner: connecting to %s", j.mediaURL)
+
+	var dialContext func(ctx context.Context, network, addr string) (net.Conn, error)
+	if j.dockerMode {
+		// Docker mode: use standard DNS
+		dialContext = (&net.Dialer{Timeout: 10 * time.Second}).DialContext
+	} else {
+		// Android mode: use stdin resolver
+		dialContext = resolvingTransport.DialContext
+	}
+
 	dialer := websocket.Dialer{
 		HandshakeTimeout: 10 * time.Second,
-		NetDialContext:   resolvingTransport.DialContext,
+		NetDialContext:   dialContext,
 	}
 	ws, _, err := dialer.Dial(j.mediaURL, wsHeader)
 	if err != nil {

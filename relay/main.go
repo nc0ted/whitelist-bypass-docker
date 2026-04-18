@@ -25,6 +25,7 @@ func main() {
 	socksPort := flag.Int("socks-port", 1080, "SOCKS5 proxy port (joiner mode only)")
 	socksUser := flag.String("socks-user", "", "SOCKS5 proxy username")
 	socksPass := flag.String("socks-pass", "", "SOCKS5 proxy password")
+	dockerMode := flag.Bool("docker-mode", false, "Enable Docker mode (use standard DNS instead of stdin resolver)")
 	flag.String("local-ip", "", "local IP address (unused, passed via hook)")
 	flag.Parse()
 
@@ -50,7 +51,7 @@ func main() {
 	startJoinerBridge := func(tun tunnel.DataTunnel, readBuf int) {
 		rb := tunnel.NewRelayBridgeWithAuth(tun, "joiner", readBuf, log.Printf, *socksUser, *socksPass)
 		rb.MarkReady()
-		go rb.ListenSOCKS(fmt.Sprintf("127.0.0.1:%d", *socksPort))
+		go rb.ListenSOCKS(fmt.Sprintf("0.0.0.0:%d", *socksPort))
 	}
 
 	joinerCallback := func(tun tunnel.DataTunnel) {
@@ -86,6 +87,7 @@ func main() {
 		startVideo(*mode, c, creatorCallback)
 	case "telemost-headless-joiner":
 		c := pion.NewTelemostHeadlessJoiner(log.Printf)
+		c.SetDockerMode(*dockerMode)
 		c.OnConnected = func(tun tunnel.DataTunnel) {
 			readBuf := common.VP8BufSize
 			if _, ok := tun.(*tunnel.DCTunnel); ok {

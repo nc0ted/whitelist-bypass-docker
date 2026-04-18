@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  joiner:
+    image: whitelist-bypass-client:latest
+    container_name: whitelist-bypass-joiner
+    network_mode: "host"
+    environment:
+      PLATFORM: ${PLATFORM:-telemost}
+
+      TUNNEL_MODE: ${TUNNEL_MODE:-video}
+
+      CALL_LINK: ${CALL_LINK}
+
+      DISPLAY_NAME: ${DISPLAY_NAME:-Joiner}
+
+      WS_PORT: 9001
+      SOCKS_PORT: 1080
+
+      SERVICE_TYPE: joiner
+    restart: unless-stopped

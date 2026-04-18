@@ -5,3 +5,4 @@ prebuilts/
 cookies*.json
 relay/relay
 whitelist-experiments/
+docker/.env
